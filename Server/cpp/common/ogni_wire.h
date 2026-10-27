@@ -120,4 +120,16 @@ namespace ogni
 		put_le32(&b[b.size() - 4], aoi_seed);
 		return b;
 	}
+
+	// S2C_SessionAccept (wire-вариант): len u16 LE + key + seed u32 — зеркало ogni_wire.enc_session_accept.
+	// Используется прод-серверами; старый однобайтовый len оставлен для совместимости внутри cpp-пары.
+	inline std::vector<uint8_t> EncodeSessionAcceptWire(const std::vector<uint8_t>& session_key, uint32_t aoi_seed)
+	{
+		std::vector<uint8_t> b(2);
+		put_le16(b.data(), static_cast<uint16_t>(session_key.size()));
+		b.insert(b.end(), session_key.begin(), session_key.end());
+		b.resize(b.size() + 4);
+		put_le32(&b[b.size() - 4], aoi_seed);
+		return b;
+	}
 } // namespace ogni
