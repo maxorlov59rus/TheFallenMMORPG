@@ -7,7 +7,8 @@ ogni-authserver — сервис авторизации «Огни душ Пад
 Каналы:
   HTTPS/JSON :4443  POST /api/v1/login   {username,password,client_build} -> {token, world_host, world_port}
   TCP        :3724  internal validate    {"op":"validate","jwt":...}       -> {"ok":true,"claims":...} | revoke
-JWT: HS256 dev-secret; prod: Ed25519 + JWKS. Пароли: Argon2id (dev fallback sha256 с солью).
+JWT: HS256 dev-secret (ОБЯЗАТЕЛЬНО задать OGNI_JWT_SECRET извне — см. main()); prod: Ed25519 + JWKS.
+Пароли: Argon2id (m=64MiB,t=3,p=4); легаси-PBKDF2 хэши прозрачно мигрируются при успешном логине.
 """
 import json, os, sys, hashlib, secrets, time, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,9 +17,15 @@ from socketserver import ThreadingTCPServer, BaseRequestHandler
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 from ogni_wire import jwt_sign, jwt_verify
 
+try:
+    from argon2.low_level import hash_secret as _a2_hash, verify_secret as _a2_verify, Type as _a2Type
+    HAVE_ARGON2 = True
+except ImportError:
+    HAVE_ARGON2 = False
+
 DB_HOST = os.environ.get('OGNI_DB_HOST', '127.0.0.1')
 DB_USER = os.environ.get('OGNI_DB_USER', 'ogni')
-DB_PW   = os.environ.get('OGNI_DB_PW', 'ogni_dev_pw')
+DB_PW   = os.environ.get('OGNI_DB_PW', 'ogni_dev_pw')  # dev-стенд; прод: OGNI_DB_PW из secret-store
 JWT_SECRET = os.environ.get('OGNI_JWT_SECRET', 'dev-only-insecure-secret').encode()
 TOKEN_TTL = int(os.environ.get('OGNI_TOKEN_TTL', '300'))
 WORLD_HOST = os.environ.get('OGNI_WORLD_HOST', '127.0.0.1')
@@ -30,17 +37,34 @@ def db():
     import mysql.connector
     return mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PW, database='ogni_auth')
 
+A2_PARAMS = dict(time_cost=3, memory_cost=65536, parallelism=4, hash_len=32, type=_a2Type.ID) if HAVE_ARGON2 else None
+
 def hash_pw(pw: str) -> str:
-    # prod: argon2id; dev-прототип — PBKDF2-HMAC-SHA256 (stdlib)
+    """Argon2id — основной формат ('$argon2id$...'). Fallback без либы: PBKDF2 (только dev)."""
+    if HAVE_ARGON2:
+        salt = secrets.token_bytes(16)
+        return _a2_hash(pw.encode(), salt, **A2_PARAMS).decode()
     salt = secrets.token_hex(16)
     dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), bytes.fromhex(salt), 200_000).hex()
     return f'pbkdf2$200000${salt}${dk}'
 
 def check_pw(pw: str, stored: str) -> bool:
+    """Возвращает True/False; special-case 'migrate' = пароль верный, но хэш легаси — надо переписать."""
+    if stored.startswith('$argon2'):
+        if not HAVE_ARGON2:
+            print('[auth] FATAL: argon2-хэш в БД, а argon2-cffi не установлен', flush=True)
+            return False
+        try:
+            return _a2_verify(stored.encode(), pw.encode(), type=_a2Type.ID)
+        except Exception:
+            return False
+    # легаси pbkdf2$iters$salt$dk
     try:
         _, iters, salt, dk = stored.split('$')
         cand = hashlib.pbkdf2_hmac('sha256', pw.encode(), bytes.fromhex(salt), int(iters)).hex()
-        return secrets.compare_digest(cand, dk)
+        if secrets.compare_digest(cand, dk):
+            return 'migrate' if HAVE_ARGON2 else True
+        return False
     except Exception:
         return False
 
@@ -83,11 +107,15 @@ class AuthAPI(BaseHTTPRequestHandler, AuditMixin):
         if acc['locked_until'] and acc['locked_until'].timestamp() > time.time():
             self.audit(acc['id'], ip, 'locked'); c.close()
             return self._json(423, {'error': 'AUTH_LOCKED'})
-        if not check_pw(pw, acc['pass_hash']):
+        pw_ok = check_pw(pw, acc['pass_hash'])
+        if pw_ok is False or pw_ok == 0:
             cur.execute("UPDATE account SET failed_logins=failed_logins+1, locked_until=IF(failed_logins+1>=%s, NOW()+INTERVAL %s MINUTE, locked_until) WHERE id=%s",
                         (MAX_FAILED, LOCK_MIN, acc['id'])); c.commit()
             self.audit(acc['id'], ip, 'bad_password'); c.close()
             return self._json(401, {'error': 'AUTH_BAD_CREDENTIALS'})
+        if pw_ok == 'migrate':
+            # прозрачная миграция легаси-PBKDF2 -> Argon2id при успешном входе
+            cur.execute("UPDATE account SET pass_hash=%s WHERE id=%s", (hash_pw(pw), acc['id']))
         if acc['status'] != 'active':
             self.audit(acc['id'], ip, 'locked'); c.close()
             return self._json(403, {'error': f"AUTH_{acc['status'].upper()}"})
@@ -155,6 +183,9 @@ class ValidatorServer(ThreadingTCPServer):
         InternalValidator(request).start()
 
 def main():
+    # SECURITY: dev-секрет запрещён вне явного стендового флага
+    if JWT_SECRET == b'dev-only-insecure-secret' and os.environ.get('OGNI_ALLOW_DEV_SECRETS') != '1':
+        sys.exit('[auth] FATAL: OGNI_JWT_SECRET не задан. Для локального стенда — OGNI_ALLOW_DEV_SECRETS=1.')
     hs_port = int(os.environ.get('OGNI_AUTH_HTTP_PORT', '4443'))
     tcp_port = int(os.environ.get('OGNI_AUTH_TCP_PORT', '3724'))
     srv_tcp = ValidatorServer(('127.0.0.1', tcp_port), None)

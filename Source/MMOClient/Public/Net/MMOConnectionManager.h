@@ -43,9 +43,21 @@ protected:
 	void HandleConnectionError();
 	void HandleSuccessfulConnection(UNetConnection* Connection);
 
+	/** опрос ogni-wire handshake (кадр в секунду из TickOwner-мира) */
+	void TickWireHandshake(float DeltaSeconds);
+	void OnWireAccepted();
+	void OnWireRejected(const TCHAR* Reason);
+
 	FString ServerHost;
 	uint32 ServerPort = 7777;
 	FString PendingAuthToken;
+
+	/** UDP-транспорт C2S_SessionHello -> S2C_SessionAccept (ogni_wire фрейминг) */
+	TUniquePtr<FMMOWireLink> WireLink;
+
+	/** Session key, полученный при handshake; для шифрования надёжного слоя (след. итерация) */
+	TArray<uint8> SessionKey;
+	uint32 AoiSeed = 0;
 
 	/** Повторные попытки с экспоненциальным backoff */
 	int32 RetryCount = 0;

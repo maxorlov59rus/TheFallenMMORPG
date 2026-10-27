@@ -16,6 +16,8 @@ void UMMOAuthService::Login(const FString& Username, const FString& Password)
 	TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetStringField(TEXT("username"), Username);
 	Body->SetStringField(TEXT("password"), Password);
+	// контракт authserver.py: сервер сверяет build с ogni_auth.allowed_builds (426 BUILD_MISMATCH)
+	Body->SetStringField(TEXT("client_build"), ClientBuildTag);
 
 	FString Out;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Out);
