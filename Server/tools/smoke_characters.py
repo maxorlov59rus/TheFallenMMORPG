@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E2E smoke персонажной линии: login -> hello -> CharListReq -> CharTemplates -> CharCreate(валидные/невалидные) -> EnterWorld.
 Выход 0 = редактор персонажа на стенде жив. Зеркаляет UMMOCharacterEditorSubsystem."""
-import sys, os, json, socket, struct, time, urllib.request
+import sys, os, json, socket, struct, time, random, string, urllib.request
 sys.path.insert(0, os.path.dirname(__file__))
 from ogni_wire import *
 
@@ -52,7 +52,7 @@ assert 'body_preset' in slots and 'vithr' in slots['body_preset']
 print(f"[4] CharTemplates OK: {len(tpl['templates'])} шаблонов; слоты einherjar: {list(slots)}")
 
 # 5) негативы валидации
-uniq = f"Smok{int(time.time())%100000}"
+uniq = "Smok" + "".join(random.choice(string.ascii_lowercase) for _ in range(6))
 for bad_name, expect in [("x", 'CHAR_BAD_NAME'), ("Odin", 'CHAR_FORBIDDEN_NAME')]:
     # сервер нормализует регистр при forbidden-проверке -> шлём 'Odin' (regex-ok), ожидим FORBIDDEN
     send_json(Msg.CHAR_CREATE, {'template_key':'einherjar_berserker','name':bad_name,'appearance':{}})

@@ -228,6 +228,7 @@ void UMMOCharacterEditorSubsystem::ParseCharCreateOk(const FString& Json)
 	}
 	double Cid = 0.0;
 	Obj->TryGetNumberField(TEXT("character_id"), Cid);
+	LastCreatedCharacterId = static_cast<int64>(Cid);
 	FString Name;
 	Obj->TryGetStringField(TEXT("name"), Name);
 	UE_LOG(LogMMOClient, Log, TEXT("[char-editor] created char #%lld '%s'"), static_cast<int64>(Cid), *Name);

@@ -41,6 +41,10 @@ struct FMMOCharTemplate
 	/** готовые пресеты ('default','hound_of_odin',...) для кнопки «случайный образ» */
 	UPROPERTY(BlueprintReadOnly, Category = "MMO|Char")
 	TArray<FString> Presets;
+
+	/** превью-ресурсы по body_preset: key = значение слота, value = спрайт/иконка (заполняет серверный контент-пак) */
+	UPROPERTY(BlueprintReadOnly, Category = "MMO|Char")
+	TMap<FString, class UTexture2D*> BodyPreviewSprites;
 };
 
 /** Запись ростера аккаунта (S2C CharList 0x3002 -> characters[]) */
@@ -136,6 +140,10 @@ public:
 	const TArray<FMMOCharTemplate>& GetTemplates() const { return Templates; }
 	const TArray<FMMOCharRosterEntry>& GetRoster() const { return Roster; }
 
+	/** ID персонажа, только что созданного через CreateCharacter (0 = ещё не создавали) */
+	UFUNCTION(BlueprintPure, Category = "MMO|Char")
+	int64 GetLastCreatedCharacterId() const { return LastCreatedCharacterId; }
+
 	UPROPERTY(BlueprintAssignable, Category = "MMO|Char")
 	FOnCharTemplatesReady OnCharTemplatesReady;
 
@@ -164,4 +172,5 @@ private:
 	TArray<FMMOCharTemplate> Templates;
 	TArray<FMMOCharRosterEntry> Roster;
 	int32 MaxCharsPerAccount = 5;
+	int64 LastCreatedCharacterId = 0;
 };
