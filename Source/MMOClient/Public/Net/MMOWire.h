@@ -42,6 +42,14 @@ namespace OgnWire
 		SoulDelta        = 0x2030,
 		ForgeMenu        = 0x2031,
 		RepChange        = 0x2040,
+		// персонажная линия (редактор создания) — зеркало ogni_wire.py / msg_registry
+		CharListReq      = 0x3001,
+		CharList         = 0x3002,
+		CharTemplates    = 0x3003,   // BOTH: C2S-запрос => S2C-ответ с тем же id
+		CharCreate       = 0x3010,
+		CharCreateOk     = 0x3011,
+		CharEnterWorld   = 0x3012,
+		WorldReady       = 0x3013,
 	};
 
 	enum EFlags : uint8
@@ -68,6 +76,10 @@ namespace OgnWire
 
 	/** Разбор S2C_SessionAccept: u16 keylen + session_key(32) + u32 aoi_seed */
 	bool ParseSessionAccept(const TArray<uint8>& Body, TArray<uint8>& OutSessionKey, uint32& OutAoiSeed);
+
+	/** JSON-кадры персонажной линии (payload = UTF-8 JSON, зеркало handle_char_message в worldserver_ref.py) */
+	void MakeJsonFrame(EMsgId MsgId, uint32 Seq, const FString& JsonUtf8, TArray<uint8>& OutFrame);
+	bool ParseJsonBody(const TArray<uint8>& Body, FString& OutJsonUtf8);
 }
 
 /**
@@ -87,6 +99,12 @@ public:
 	void Poll(bool& OutAccepted, bool& OutRejected, bool& OutTimedOut);
 	void Close();
 
+	/** Персонажная линия (редактор): JSON-кадры поверх established handshake-сокета.
+	 *  Ответы приходят через SetJsonHandler (msg_id = CharList/CharTemplates/CharCreateOk/WorldReady). */
+	bool SendJson(OgnWire::EMsgId MsgId, const FString& JsonUtf8, FString& OutError);
+	using FOnWireJsonNative = TFunction<void(uint16 /*EMsgId*/, const FString& /*Json*/)>;
+	void SetJsonHandler(FOnWireJsonNative InHandler) { OnWireJsonNative = MoveTemp(InHandler); }
+
 	const TArray<uint8>& LastSessionKey() const { return SessionKey; }
 	uint32 LastAoiSeed() const { return AoiSeed; }
 	bool IsOpen() const { return Socket != nullptr; }
@@ -94,6 +112,8 @@ public:
 private:
 	FDelegateHandle ReadHandle;
 	FSocket* Socket = nullptr;
+	FOnWireJsonNative OnWireJsonNative;   // dispatch S2C JSON-кадров персонажной линии
+	uint32 OutSeq = 1;                    // seq для C2S-кадров после handshake
 	TWeakObjectPtr<UMMOConnectionManager> Owner;
 	uint32 HelloSeq = 1;
 	double HelloSentTime = 0.0;

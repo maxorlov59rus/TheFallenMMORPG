@@ -28,6 +28,14 @@ class Msg:
     SESSION_HELLO     = 0x2F02   # C2S handshake (jwt)
     SESSION_ACCEPT    = 0x2F00   # S2C
     PROTOCOL_MISMATCH = 0x2F01
+    # --- персонажная линия: редактор создания персонажа ---
+    CHAR_LIST_REQ     = 0x3001   # C2S {}
+    CHAR_LIST         = 0x3002   # S2C json: roster + templates summary
+    CHAR_TEMPLATES    = 0x3003   # S2C json: полный appearance_schema для редактора
+    CHAR_CREATE       = 0x3010   # C2S json {template_key,name,appearance}
+    CHAR_CREATE_OK    = 0x3011   # S2C json {character_id,...} | error
+    CHAR_ENTER_WORLD  = 0x3012   # C2S json {character_id}
+    WORLD_READY       = 0x3013   # S2C json {zone,pos,hp,...}
 
 FLAG_ACK       = 0x01
 FLAG_RELIABLE  = 0x02
