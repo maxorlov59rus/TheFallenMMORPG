@@ -146,7 +146,13 @@ static void ServeHttpConn(int fd, std::string peer_ip)
 			std::string headers = req.substr(0, hend);
 			std::transform(headers.begin(), headers.end(), headers.begin(), ::tolower);
 			size_t p = headers.find("content-length:");
-			if (p != std::string::npos) clen = strtoul(headers.c_str() + p + 15, nullptr, 10);
+			// пропуск пробелов/TAB после «content-length:» — иначе strtoul вернёт 0, тело станет пустым (bad_json 400)
+			if (p != std::string::npos)
+			{
+				p += 15;
+				while (p < headers.size() && (headers[p] == ' ' || headers[p] == '\t')) ++p;
+				clen = strtoul(headers.c_str() + p, nullptr, 10);
+			}
 			if (req.size() >= hend + 4 + clen) break; // заголовок и тело приняты полностью
 		}
 	}
