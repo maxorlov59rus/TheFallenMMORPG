@@ -50,6 +50,27 @@ namespace OgnWire
 		FMemory::Memcpy(&OutAoiSeed, Body.GetData() + 2 + KeyLen, 4);
 		return true;
 	}
+
+	void MakeJsonFrame(EMsgId MsgId, uint32 Seq, const FString& JsonUtf8, TArray<uint8>& OutFrame)
+	{
+		FTCHARToUTF8 Utf8(*JsonUtf8);
+		OutFrame.Reset(HeaderLen + Utf8.Length());
+		OutFrame.Add(Magic0);
+		OutFrame.Add(Magic1);
+		OutFrame.Add(Version);
+		AppendU16(OutFrame, static_cast<uint16>(MsgId));
+		AppendU32(OutFrame, Seq);
+		OutFrame.Add(Reliable);
+		OutFrame.Append(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+	}
+
+	bool ParseJsonBody(const TArray<uint8>& Body, FString& OutJsonUtf8)
+	{
+		// JSON-кадры персонажной линии: тело = UTF-8 JSON целиком (handle_char_message в worldserver_ref.py)
+		if (Body.Num() < 2 || Body[0] != '{') return false;
+		OutJsonUtf8 = FString(UTF8_TO_TCHAR(reinterpret_cast<const ANSICHAR*>(Body.GetData())));
+		return true;
+	}
 }
 
 // ----------FMMOWireLink----------
@@ -110,6 +131,26 @@ void FMMOWireLink::SendHello(const FString& Jwt)
 	UE_LOG(LogMMONet, Log, TEXT("[wire] C2S_SessionHello sent (jwt %d chars, seq %u)"), Jwt.Len(), HelloSeq);
 }
 
+bool FMMOWireLink::SendJson(OgnWire::EMsgId MsgId, const FString& JsonUtf8, FString& OutError)
+{
+	if (!Socket) { OutError = TEXT("wire link not open"); return false; }
+	TArray<uint8> Frame;
+	OgnWire::MakeJsonFrame(MsgId, OutSeq, JsonUtf8, Frame);
+	int32 Sent = 0;
+	const bool bOk = Socket->SendTo(ServerAddr.Get(), Frame.GetData(), Frame.Num(), Sent) && Sent == Frame.Num();
+	if (bOk)
+	{
+		++OutSeq;
+		UE_LOG(LogMMONet, VeryVerbose, TEXT("[wire] JSON C2S msg=%d seq=%u (%d bytes)"),
+			static_cast<int32>(MsgId), OutSeq - 1, Frame.Num());
+	}
+	else
+	{
+		OutError = TEXT("udp send failed");
+	}
+	return bOk;
+}
+
 void FMMOWireLink::Poll(bool& OutAccepted, bool& OutRejected, bool& OutTimedOut)
 {
 	OutAccepted = OutRejected = OutTimedOut = false;
@@ -138,6 +179,15 @@ void FMMOWireLink::Poll(bool& OutAccepted, bool& OutRejected, bool& OutTimedOut)
 		{
 			OutRejected = true; // bad jwt / revoked / build mismatch — ретрай бессмысленен
 			return;
+		}
+		else if (OnWireJsonNative)
+		{
+			// персонажная линия и прочие S2C JSON-кадры (CharList/CharTemplates/CharCreateOk/WorldReady...)
+			FString JsonStr;
+			if (OgnWire::ParseJsonBody(Fr.Body, JsonStr))
+			{
+				OnWireJsonNative(static_cast<uint16>(Fr.MsgId), JsonStr);
+			}
 		}
 	}
 

@@ -16,6 +16,7 @@ public class MMOClient : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"NetCore",
+					"Sockets",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils"
 		});
