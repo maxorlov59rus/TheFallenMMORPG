@@ -133,35 +133,32 @@ static void ServeHttpConn(int fd, std::string peer_ip)
 {
 	char buf[8192]; size_t total = 0;
 	std::string req;
+	size_t hend = std::string::npos, clen = 0;
 	while (total < sizeof(buf) - 1)
 	{
 		ssize_t n = recv(fd, buf + total, sizeof(buf) - 1 - total, 0);
 		if (n <= 0) break;
 		total += n; buf[total] = 0;
 		req.assign(buf, total);
-		if (req.find("\r\n\r\n") != std::string::npos) break;
+		hend = req.find("\r\n\r\n");
+		if (hend != std::string::npos)
+		{
+			std::string headers = req.substr(0, hend);
+			std::transform(headers.begin(), headers.end(), headers.begin(), ::tolower);
+			size_t p = headers.find("content-length:");
+			if (p != std::string::npos) clen = strtoul(headers.c_str() + p + 15, nullptr, 10);
+			if (req.size() >= hend + 4 + clen) break; // заголовок и тело приняты полностью
+		}
 	}
 	if (req.compare(0, 4, "POST") != 0 || req.find("/api/v1/login") == std::string::npos)
 	{
 		const char* r404 = "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":\"not_found\"}";
 		send(fd, r404, strlen(r404), 0); closesocket(fd); return;
 	}
-	size_t hend = req.find("\r\n\r\n");
-	size_t clen = 0;
-	{
-		std::string headers = req.substr(0, hend);
-		std::transform(headers.begin(), headers.end(), headers.begin(), ::tolower);
-		size_t p = headers.find("content-length:");
-		if (p != std::string::npos) clen = strtoul(headers.c_str() + p + 15, nullptr, 10);
-	}
-	while (clen > 0 && hend + 4 + clen > req.size())
-	{
-		ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
-		if (n <= 0) break;
-		buf[n] = 0; req.append(buf, n);
-	}
+	if (hend == std::string::npos) { closesocket(fd); return; } // неполный запрос — молча закрываем
 	int code = 400; std::string out;
 	if (clen > 4096) { code = 413; out = "{\"error\":\"too_big\"}"; }
+	else if (req.size() < hend + 4 + clen) { code = 400; out = "{\"error\":\"short_body\"}"; }
 	else
 	{
 		JsonPtr j = Json::ParseStrict(req.substr(hend + 4, clen));
