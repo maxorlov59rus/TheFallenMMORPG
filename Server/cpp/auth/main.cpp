@@ -93,6 +93,9 @@ static LoginResult HandleLogin(const std::string& user, const std::string& pw, c
 		claims->SetS("jti", jti);
 		claims->SetN("exp", double(time(nullptr) + TOKEN_TTL));
 		claims->SetS("build", build);
+		// тонкий канал auth->world: мир получает минимальный набор без обращения к ogni_auth
+		claims->SetS("username", user);
+		claims->SetS("flags", acc.vals[2]);   // status из account (active/gm/banned)
 		std::string token = JwtSign(claims, JWT_SECRET);
 
 		db.Execute("UPDATE account SET failed_logins=0, last_login_at=NOW() WHERE id=?", {acc_id});
@@ -220,11 +223,23 @@ static std::string ValidateJwt(const std::string& token)
 	try
 	{
 		Db db(DB_HOST, DB_USER, DB_PW, "ogni_auth");
-		auto rows = db.Query("SELECT revoked_at IS NOT NULL AS rev, expires_at > NOW() AS live FROM auth_session WHERE jwt_id=?", {jti});
+		auto rows = db.Query("SELECT s.revoked_at IS NOT NULL AS rev, s.expires_at > NOW() AS live, a.username, a.status "
+		                     "FROM auth_session s JOIN account a ON a.id=s.account_id WHERE s.jwt_id=?", {jti});
 		JsonPtr o = Json::MakeObj();
 		if (rows.empty() || rows[0].vals[0] == "1" || rows[0].vals[1] == "0")
 		{ o->SetB("ok", false); o->SetS("error", "revoked_or_expired"); }
-		else { o->SetB("ok", true); o->Set("claims", claims); }
+		else
+		{
+			o->SetB("ok", true);
+			o->Set("claims", claims);
+			// расширенный ответ для world: {sub, username, flags} — миру не нужен доступ к ogni_auth
+			JsonPtr ac = Json::MakeObj();
+			const JsonPtr* subp = claims->Find("sub");
+			ac->Set("sub", subp ? *subp : Json::MakeNum(0));
+			ac->SetS("username", rows[0].vals[2]);
+			ac->SetS("flags", rows[0].vals[3]);
+			o->Set("account", ac);
+		}
 		return o->Dump();
 	}
 	catch (const std::exception& e)

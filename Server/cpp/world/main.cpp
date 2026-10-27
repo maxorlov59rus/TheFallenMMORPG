@@ -141,7 +141,8 @@ static void HandleCharMessage(int sock, const sockaddr_in& addr, Session& s, uin
 		JsonPtr roster = Json::MakeArr();
 		try
 		{
-			Db db(DB_HOST, DB_USER, DB_PW, "ogni_auth");
+			// Персонажи живут в ogni_characters (зона ответственности мира); auth хранит только аккаунты.
+			Db db(DB_HOST, DB_USER, DB_PW, "ogni_characters");
 			auto rows = db.Query("SELECT id,name,race_key,class_key,level FROM characters WHERE account_id=? AND deleted_at IS NULL", {DbStr(acc)});
 			for (auto& r : rows) roster->Push(Db::ToJson(r, {"id","name","race_key","class_key","level"}));
 		}
@@ -202,15 +203,14 @@ static void HandleCharMessage(int sock, const sockaddr_in& addr, Session& s, uin
 				}
 			}
 
-			Db da(DB_HOST, DB_USER, DB_PW, "ogni_auth");
-			auto cnt = da.Query("SELECT COUNT(*) n FROM characters WHERE account_id=? AND deleted_at IS NULL", {DbStr(acc)});
+			auto cnt = dc.Query("SELECT COUNT(*) n FROM characters WHERE account_id=? AND deleted_at IS NULL", {DbStr(acc)});
 			if (!cnt.empty() && atoll(cnt[0].vals[0].c_str()) >= MAX_CHARS_PER_ACCOUNT)
 			{ errr->SetS("error", "CHAR_LIMIT"); SendJson(sock, addr, s, CHAR_CREATE_OK, errr); return; }
 
 			uint64_t cid;
 			try
 			{
-				cid = da.InsertReturnId("INSERT INTO characters (account_id,name,race_key,class_key,level) VALUES (?,?,?,?,1)",
+				cid = dc.InsertReturnId("INSERT INTO characters (id,account_id,name,race_key,class_key,level) VALUES (NULL,?,?,?,?,1)",
 					{DbStr(int64_t(acc)), name, tpl.vals[1], tpl.vals[2]});
 			}
 			catch (const std::exception&)
@@ -239,12 +239,11 @@ static void HandleCharMessage(int sock, const sockaddr_in& addr, Session& s, uin
 		if (!req) { errr->SetS("error", "CHAR_BAD_JSON"); SendJson(sock, addr, s, WORLD_READY, errr); return; }
 		int64_t cid = JGetI(req, "character_id");
 
-		Db da(DB_HOST, DB_USER, DB_PW, "ogni_auth");
-		auto ch_rows = da.Query("SELECT id,name FROM characters WHERE id=? AND account_id=? AND deleted_at IS NULL", {DbStr(cid), DbStr(acc)});
+		Db dc(DB_HOST, DB_USER, DB_PW, "ogni_characters");
+		auto ch_rows = dc.Query("SELECT id,name FROM characters WHERE id=? AND account_id=? AND deleted_at IS NULL", {DbStr(cid), DbStr(acc)});
 		if (ch_rows.empty()) { errr->SetS("error", "CHAR_NOT_OWNED"); SendJson(sock, addr, s, WORLD_READY, errr); return; }
 		std::string char_name = ch_rows[0].vals[1];
 
-		Db dc(DB_HOST, DB_USER, DB_PW, "ogni_characters");
 		auto snap_rows = dc.Query("SELECT base_hp, resource_type, base_resource, stats_json, starting_zone FROM character_snapshot WHERE character_id=?", {DbStr(cid)});
 		if (snap_rows.empty()) { errr->SetS("error", "CHAR_NO_SNAPSHOT"); SendJson(sock, addr, s, WORLD_READY, errr); return; }
 		auto& snap = snap_rows[0];

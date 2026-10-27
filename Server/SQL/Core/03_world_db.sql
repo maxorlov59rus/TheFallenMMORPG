@@ -8,9 +8,9 @@ SET NAMES utf8mb4;
 CREATE DATABASE IF NOT EXISTS ogni_world CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE ogni_world;
 
--- Игровое состояние персонажа (персонаж-владелец — в ogni_auth.characters, id совпадают)
+-- Игровое состояние персонажа (персонаж-владелец — в ogni_characters.characters, id совпадают)
 CREATE TABLE IF NOT EXISTS character_state (
-  character_id   BIGINT UNSIGNED NOT NULL PRIMARY KEY,   -- FK смысловой -> ogni_auth.characters.id
+  character_id   BIGINT UNSIGNED NOT NULL PRIMARY KEY,   -- FK смысловой -> ogni_characters.characters.id
   zone_key       VARCHAR(32)  NOT NULL DEFAULT 'vindalr_plains',
   pos_x FLOAT NOT NULL, pos_y FLOAT NOT NULL, pos_z FLOAT NOT NULL,
   yaw            DECIMAL(6,3) NOT NULL DEFAULT 0,
