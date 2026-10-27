@@ -32,7 +32,7 @@ void AMMOSoulHUD::DrawHUD()
 		if (Now - It->Value.LastSeen > 5.0) It.RemoveCurrent();
 	}
 
-	UFont* UseFont = Font ? Font : GEngine->GetSmallFont();
+	UFont* UseFont = Font.Get() ? Font.Get() : GEngine->GetSmallFont();
 	int32 Idx = 0;
 	for (const auto& Pair : Entities)
 	{
@@ -72,7 +72,7 @@ void AMMOSoulHUD::DrawBar(const FVector2D& ScreenPos, float HpFrac, float ResFra
 	// Рамка
 	DrawRect(FLinearColor(0.9f, 0.85f, 0.7f, 0.9f), ScreenPos.X - 1.f, ScreenPos.Y - 1.f, W + 2.f, 1.f);
 
-	UFont* UseFont = Font ? Font : GEngine->GetSmallFont();
+	UFont* UseFont = Font.Get() ? Font.Get() : GEngine->GetSmallFont();
 	if (UseFont)
 	{
 		SetTextColor(FLinearColor::White);

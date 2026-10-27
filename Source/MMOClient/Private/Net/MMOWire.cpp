@@ -180,13 +180,13 @@ void FMMOWireLink::Poll(bool& OutAccepted, bool& OutRejected, bool& OutTimedOut)
 			OutRejected = true; // bad jwt / revoked / build mismatch — ретрай бессмысленен
 			return;
 		}
-		else if (OnWireJsonNative)
+		else if (OnWireJsonNative.IsBound())
 		{
 			// персонажная линия и прочие S2C JSON-кадры (CharList/CharTemplates/CharCreateOk/WorldReady...)
 			FString JsonStr;
 			if (OgnWire::ParseJsonBody(Fr.Body, JsonStr))
 			{
-				OnWireJsonNative(static_cast<uint16>(Fr.MsgId), JsonStr);
+				OnWireJsonNative.Execute(static_cast<uint16>(Fr.MsgId), JsonStr);
 			}
 		}
 	}
