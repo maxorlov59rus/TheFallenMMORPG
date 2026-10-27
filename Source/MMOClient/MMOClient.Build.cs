@@ -28,7 +28,8 @@ public class MMOClient : ModuleRules
 			"UMG",
 			"HTTP",
 			"Json",
-			"JsonUtilities"
+			"JsonUtilities",
+			"Niagara"
 		});
 
 		// Для Shipping-сборки клиента редакторские модули отключены

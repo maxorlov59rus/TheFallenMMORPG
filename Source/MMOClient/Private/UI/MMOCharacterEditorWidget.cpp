@@ -11,6 +11,7 @@
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Engine/Texture2D.h"
+#include "Game/MMOAssetLibrary.h"
 
 void UMMOCharacterEditorWidget::NativeConstruct()
 {
@@ -132,10 +133,33 @@ void UMMOCharacterEditorWidget::UpdatePreviewFromSlots()
 	const TObjectPtr<UComboBoxString>* BodyCombo = SlotCombos.Find(TEXT("body_preset"));
 	if (!BodyCombo || !BodyCombo->Get()) return;
 	const FString Preset = (*BodyCombo)->GetSelectedOption();
-	if (UTexture2D** Tex = BodyPresetSprites.Find(Preset))
+
+	// 1) Реальный арт художника (заполненный BodyPresetSprites в WBP) — приоритет.
+	UTexture2D* Tex = nullptr;
+	if (TObjectPtr<UTexture2D>* Found = BodyPresetSprites.Find(Preset))
+	{
+		Tex = *Found;
+	}
+	// 2) Fallback до появления арта: процедурный силуэт по ключу пресета,
+	//    оттенок детерминирован по расе выбранного шаблона.
+	if (!Tex && EditorSub && !CurrentTemplateKey.IsEmpty())
+	{
+		FString RaceKey(TEXT("default"));
+		for (const FMMOCharTemplate& T : EditorSub->GetTemplates())
+		{
+			if (T.TemplateKey == CurrentTemplateKey)
+			{
+				RaceKey = T.RaceKey;
+				break;
+			}
+		}
+		Tex = UMMOAssetLibrary::MakeBodyPresetSprite(Preset,
+			UMMOAssetLibrary::ColorFromStringKey(RaceKey, 0.45f, 0.9f));
+	}
+	if (Tex)
 	{
 		FSlateBrush Brush;
-		Brush.SetResourceObject(*Tex);
+		Brush.SetResourceObject(Tex);
 		Brush.ImageSize = FVector2D(256.f, 256.f);
 		PreviewImage->SetBrush(Brush);
 	}

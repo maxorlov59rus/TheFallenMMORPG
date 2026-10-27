@@ -8,6 +8,7 @@
 #include "MMOCharacter.generated.h"
 
 class USkeletalMeshComponent;
+class UStaticMeshComponent;
 
 /**
  * Клиентское представление персонажа игрока.
@@ -21,6 +22,18 @@ class MMOCLIENT_API AMMOCharacter : public ACharacter
 
 public:
 	AMMOCharacter();
+
+	/** Визуальные компоненты-заглушки (до подключения скелетных мешей):
+	 *  Body — торс+голова, Legs — ноги. Midtone задаётся по расе через ApplyRaceTint. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MMO|Visual")
+	TObjectPtr<UStaticMeshComponent> Body;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MMO|Visual")
+	TObjectPtr<UStaticMeshComponent> Legs;
+
+	/** Оттенок расы из char_template.race_key (einherjar/huldra/leosalfar/duvalfar). */
+	UFUNCTION(BlueprintCallable, Category = "MMO|Visual")
+	void ApplyRaceTint(const FString& RaceKey);
 
 	UFUNCTION(BlueprintCallable, Category = "MMO|Identity")
 	void ApplyServerIdentity(const FMMOCharacterId& InId, const FString& InDisplayName);
