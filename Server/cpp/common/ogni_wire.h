@@ -125,11 +125,15 @@ namespace ogni
 	// Используется прод-серверами; старый однобайтовый len оставлен для совместимости внутри cpp-пары.
 	inline std::vector<uint8_t> EncodeSessionAcceptWire(const std::vector<uint8_t>& session_key, uint32_t aoi_seed)
 	{
-		std::vector<uint8_t> b(2);
-		put_le16(b.data(), static_cast<uint16_t>(session_key.size()));
-		b.insert(b.end(), session_key.begin(), session_key.end());
-		b.resize(b.size() + 4);
-		put_le32(&b[b.size() - 4], aoi_seed);
+		// резервируем всё тело сразу: reserve+push_back исключает range-insert поверх 2-байтового
+		// инициализатора (источник ложного -Warray-bounds в GCC 12 при инлайтинге vector::insert)
+		std::vector<uint8_t> b;
+		b.reserve(2 + session_key.size() + 4);
+		uint8_t lenb[2]; put_le16(lenb, static_cast<uint16_t>(session_key.size()));
+		b.push_back(lenb[0]); b.push_back(lenb[1]);
+		for (uint8_t x : session_key) b.push_back(x);
+		uint8_t seedb[4]; put_le32(seedb, aoi_seed);
+		for (int i = 0; i < 4; ++i) b.push_back(seedb[i]);
 		return b;
 	}
 } // namespace ogni
