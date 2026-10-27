@@ -1,6 +1,7 @@
-# MMO Client — Unreal Engine 6
+# MMO Project — Unreal Engine 6 клиент + серверное ПО «Огни душ Падших Валькирий»
 
-Игровой клиент разрабатываемой MMORPG на **Unreal Engine 6**.
+Игровой клиент разрабатываемой MMORPG (фэнтези-экшен, скандинавский сеттинг) на **Unreal Engine 6**.
+Параллельно развивается серверная часть под Windows x64 с архитектурой уровня TrinityCore и **полной де-WOW-изацией** (`Server/`).
 
 ## Структура проекта
 
@@ -12,8 +13,23 @@ Source/MMOClient/           — C++-код клиента (Game Module)
   Private/                  — реализация
 Content/                    — ассеты (уровни, материалы, Blueprint'ы)
 Plugins/                    — плагины (сетевой слой, античит и т.д.)
-Docs/                       — архитектурная документация
+Docs/                       — архитектурная документация клиента
+
+Server/                     — серверное ПО «Огни душ Падших Валькирий» (Windows x64)
+  Docs/                     — SERVER_ARCHITECTURE.md, PROTOCOL.md
+  SQL/Core/                 — схемы доменов сеттинга (расы/классы/кланы/души)
+  SQL/Patches/              — патчи геймплея: Fallen, Soul, Valkyrie
+  Lua/scripts/              — soul_forge.lua, fallen_event.lua, valkyrie_call.lua
+  Config/                   — ogni-world.conf (экшен-тайминги, server-authoritative бои)
+  Tools/                    — check_wow_refs.py (CI-гейт де-WOW-изации)
 ```
+
+## Сервер: быстрая навигация
+
+- Архитектура и процесс компиляции: `Server/Docs/SERVER_ARCHITECTURE.md`
+- Контракт с UE6-клиентом (msg_id registry): `Server/Docs/PROTOCOL.md`
+- Порядок применения БД: `SQL/Core/01_setting_domains.sql` → `SQL/Patches/create_fallen_valkyries_racial_traits.sql` → `soul_system_items.sql` → `valkyrie_ressurrection_mechanic.sql`
+- CI-гейт чистоты сеттинга: `python3 Server/Tools/check_wow_refs.py` (должен возвращать OK)
 
 ## Архитектура клиента (высокий уровень)
 
