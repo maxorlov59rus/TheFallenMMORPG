@@ -102,7 +102,8 @@ public:
 	/** Персонажная линия (редактор): JSON-кадры поверх established handshake-сокета.
 	 *  Ответы приходят через SetJsonHandler (msg_id = CharList/CharTemplates/CharCreateOk/WorldReady). */
 	bool SendJson(OgnWire::EMsgId MsgId, const FString& JsonUtf8, FString& OutError);
-	using FOnWireJsonNative = TFunction<void(uint16 /*EMsgId*/, const FString& /*Json*/)>;
+	/** Нативный делегат S2C JSON-кадров (объявление вне класса — синтаксис UE). */
+	DECLARE_DELEGATE_TwoParams(FOnWireJsonNative, uint16 /*EMsgId*/, const FString& /*Json*/);
 	void SetJsonHandler(FOnWireJsonNative InHandler) { OnWireJsonNative = MoveTemp(InHandler); }
 
 	const TArray<uint8>& LastSessionKey() const { return SessionKey; }

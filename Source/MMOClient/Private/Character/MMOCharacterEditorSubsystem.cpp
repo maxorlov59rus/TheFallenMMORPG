@@ -145,12 +145,16 @@ void UMMOCharacterEditorSubsystem::ParseCharList(const FString& Json)
 			(*C)->TryGetStringField(TEXT("name"), E.Name);
 			(*C)->TryGetStringField(TEXT("race_key"), E.RaceKey);
 			(*C)->TryGetStringField(TEXT("class_key"), E.ClassKey);
-			(*C)->TryGetNumberField(TEXT("level"), E.Level);
+			double LevelD = 0.0;
+				(*C)->TryGetNumberField(TEXT("level"), LevelD);
+				E.Level = static_cast<int32>(LevelD);
 			E.CharacterId = static_cast<int64>(Cid);
 			Roster.Add(MoveTemp(E));
 		}
 	}
-	Obj->TryGetNumberField(TEXT("max_chars"), MaxCharsPerAccount);
+	double MaxCharsD = 5.0;
+	Obj->TryGetNumberField(TEXT("max_chars"), MaxCharsD);
+	MaxCharsPerAccount = static_cast<int32>(MaxCharsD);
 	UE_LOG(LogMMOClient, Log, TEXT("[char-editor] roster: %d chars, max=%d"), Roster.Num(), MaxCharsPerAccount);
 	OnCharRosterReady.Broadcast();
 }
@@ -254,9 +258,13 @@ void UMMOCharacterEditorSubsystem::ParseWorldReady(const FString& Json)
 	Obj->TryGetStringField(TEXT("name"), Info.Name);
 	Obj->TryGetStringField(TEXT("zone_key"), Info.ZoneKey);
 	Obj->TryGetStringField(TEXT("resource_type"), Info.ResourceType);
-	Obj->TryGetNumberField(TEXT("hp"), Info.Hp);
-	Obj->TryGetNumberField(TEXT("max_hp"), Info.MaxHp);
-	Obj->TryGetNumberField(TEXT("resource"), Info.Resource);
+	double HpD = 0.0, MaxHpD = 0.0, ResD = 0.0;
+	Obj->TryGetNumberField(TEXT("hp"), HpD);
+	Obj->TryGetNumberField(TEXT("max_hp"), MaxHpD);
+	Obj->TryGetNumberField(TEXT("resource"), ResD);
+	Info.Hp = static_cast<int32>(HpD);
+	Info.MaxHp = static_cast<int32>(MaxHpD);
+	Info.Resource = static_cast<int32>(ResD);
 
 	const TArray<TSharedPtr<FJsonValue>>* Pos = nullptr;
 	if (Obj->TryGetArrayField(TEXT("pos"), Pos) && Pos->Num() >= 3)
