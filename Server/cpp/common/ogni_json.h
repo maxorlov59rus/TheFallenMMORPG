@@ -55,6 +55,9 @@ namespace ogni
 		void SetS(const std::string& k, const std::string& v) { Set(k, MakeStr(v)); }
 		void SetN(const std::string& k, double v) { Set(k, MakeNum(v)); }
 		void SetB(const std::string& k, bool v) { Set(k, MakeBool(v)); }
+		// сырое значение из уже сериализованного JSON (например, дамп claims из подписанного JWT —
+		// числа должны сохранить целочисленный вид, как в Python-референсе)
+		void SetRaw(const std::string& k, const std::string& rawJson) { (*this)[k] = ParseStrict(rawJson); }
 
 		// -------- serialize --------
 		std::string Dump() const

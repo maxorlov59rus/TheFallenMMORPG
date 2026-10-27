@@ -105,7 +105,19 @@ static LoginResult HandleLogin(const std::string& user, const std::string& pw, c
 		resp->SetS("token", token);
 		resp->SetS("world_host", WORLD_HOST);
 		resp->SetN("world_port", WORLD_PORT);
-		resp->SetS("session_key_b64", B64UrlEncode(skey.data(), skey.size()));
+		// wire-совместимость с Python-референсом: session_key_b64 — обычный urlsafe base64 С padding '='
+		{
+			static const char* TB = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+			std::string b64;
+			for (size_t i = 0; i < skey.size(); i += 3)
+			{
+				uint32_t v = uint32_t(skey[i]) << 16 | (i + 1 < skey.size() ? uint32_t(skey[i+1]) << 8 : 0) | (i + 2 < skey.size() ? uint32_t(skey[i+2]) : 0);
+				b64 += TB[(v >> 18) & 63]; b64 += TB[(v >> 12) & 63];
+				b64 += (i + 1 < skey.size()) ? TB[(v >> 6) & 63] : '=';
+				b64 += (i + 2 < skey.size()) ? TB[v & 63] : '=';
+			}
+			resp->SetS("session_key_b64", b64);
+		}
 		resp->SetN("ttl_sec", TOKEN_TTL);
 		return {200, resp->Dump()};
 	}
