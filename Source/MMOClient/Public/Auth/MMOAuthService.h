@@ -22,7 +22,11 @@ class MMOCLIENT_API UMMOAuthService : public UActorComponent
 
 public:
 	UPROPERTY(EditAnywhere, Config, Category = "MMO|Auth")
-	FString AuthEndpoint = TEXT("https://auth.example.com/api/v1/login");
+	FString AuthEndpoint = TEXT("http://127.0.0.1:4443/api/v1/login"); // стенд; прод — https + cert-pinning
+
+	/** Тег сборки клиента; должен присутствовать в ogni_auth.allowed_builds на сервере */
+	UPROPERTY(EditAnywhere, Config, Category = "MMO|Auth")
+	FString ClientBuildTag = TEXT("ogni-p0-dev");
 
 	UFUNCTION(BlueprintCallable, Category = "MMO|Auth")
 	void Login(const FString& Username, const FString& Password);
