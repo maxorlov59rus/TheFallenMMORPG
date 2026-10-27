@@ -236,7 +236,7 @@ namespace ogni
 				if (!v) return nullptr;
 				a->Push(v);
 				SkipWs(s, p);
-				if (p < s.size() && s[p] == ',') { ++p; continue; }
+				if (p < s.size() && s[p] == ',') { ++p; SkipWs(s, p); continue; }
 				if (p < s.size() && s[p] == ']') { ++p; return a; }
 				return nullptr;
 			}
@@ -260,7 +260,7 @@ namespace ogni
 				if (!v) return nullptr;
 				o->Set(key, v);
 				SkipWs(s, p);
-				if (p < s.size() && s[p] == ',') { ++p; continue; }
+				if (p < s.size() && s[p] == ',') { ++p; SkipWs(s, p); continue; }
 				if (p < s.size() && s[p] == '}') { ++p; return o; }
 				return nullptr;
 			}

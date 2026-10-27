@@ -1,10 +1,10 @@
 -- ============================================================
 -- 05_characters_db.sql — БД персонажей (ogni_characters) и шаблоны редактора.
 -- Разделение ответственности:
---   ogni_auth.characters      — владелец (account), имя, soft-delete (регистрация персонажа)
+--   ogni_characters.characters — владелец (account_id), имя, soft-delete (миграция 06)
 --   ogni_characters.*         — внешность/конфиг из редактора (character_template_json) + снапшот стартовых статов
 --   ogni_world.character_state— runtime-состояние (позиция, HP, ресурс)
--- Порядок применения: 01 -> 02 -> 03 -> 04 -> 05 -> патчи.
+-- Порядок применения: 01 -> 02 -> 03 -> 04 -> 05 -> 06 (перенос владения) -> патчи.
 -- ============================================================
 SET NAMES utf8mb4;
 
@@ -75,7 +75,7 @@ ON DUPLICATE KEY UPDATE display_name=VALUES(display_name), appearance_schema=VAL
 -- ---------- СОСТОЯНИЕ ПЕРСОНАЖА В РЕДАКТОРЕ (через character_creation_session) ----------
 -- Черты выбранного персонажа фиксируются при создании; json = итоговый вид редактора.
 CREATE TABLE IF NOT EXISTS character_appearance (
-  character_id    BIGINT UNSIGNED NOT NULL PRIMARY KEY,  -- = ogni_auth.characters.id
+  character_id    BIGINT UNSIGNED NOT NULL PRIMARY KEY,  -- = ogni_characters.characters.id
   template_id     INT UNSIGNED NOT NULL,
   appearance_json JSON NOT NULL,                         -- выбранные значения по слотам схемы
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,7 +110,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON ogni_characters.* TO 'ogni'@'lo
 -- Миграция существующего dev-персонажа Sigrid под шаблон (если база уже наполнена 04_)
 INSERT IGNORE INTO character_appearance (character_id, template_id, appearance_json)
 SELECT c.id, t.template_id, '{"body_preset":"vithr","hair":"bound","face_scar":"raven","eye_glow":"ember","armor_style":"chain"}'
-FROM ogni_auth.characters c JOIN char_template t ON t.template_key='einherjar_berserker' WHERE c.name='Sigrid';
+FROM characters c JOIN char_template t ON t.template_key='einherjar_berserker' WHERE c.name='Sigrid';
 
 INSERT IGNORE INTO character_snapshot (character_id, base_hp, resource_type, base_resource, stats_json, starting_zone)
 SELECT ca.character_id, t.base_hp, t.resource_type, t.base_resource, t.base_stats, t.starting_zone

@@ -73,7 +73,7 @@ def handle_char_message(sock, addr, sess, msg_id, body):
         sess['seq_out'] += 1
 
     if msg_id == Msg.CHAR_LIST_REQ:
-        c = db('ogni_auth'); cur = c.cursor(dictionary=True)
+        c = db('ogni_characters'); cur = c.cursor(dictionary=True)  # владение персонажами — зона мира (миграция 06)
         cur.execute("SELECT id,name,race_key,class_key,level FROM characters WHERE account_id=%s AND deleted_at IS NULL", (acc,))
         roster = cur.fetchall(); c.close()
         send(Msg.CHAR_LIST, {'characters': roster, 'templates': get_templates_summary(), 'max_chars': MAX_CHARS_PER_ACCOUNT})
@@ -101,7 +101,7 @@ def handle_char_message(sock, addr, sess, msg_id, body):
             if allowed is None or val not in allowed:
                 send(Msg.CHAR_CREATE_OK, {'error': f'CHAR_BAD_APPEARANCE:{slot}'}); return True
         # лимит + уникальность имени (атомарно через INSERT с UNIQUE на имя)
-        c = db('ogni_auth'); cur = c.cursor(dictionary=True)
+        c = db('ogni_characters'); cur = c.cursor(dictionary=True)
         cur.execute("SELECT COUNT(*) n FROM characters WHERE account_id=%s AND deleted_at IS NULL", (acc,))
         if cur.fetchone()['n'] >= MAX_CHARS_PER_ACCOUNT:
             c.close(); send(Msg.CHAR_CREATE_OK, {'error': 'CHAR_LIMIT'}); return True
@@ -128,7 +128,7 @@ def handle_char_message(sock, addr, sess, msg_id, body):
             cid = int(json.loads(body)['character_id'])
         except Exception:
             send(Msg.WORLD_READY, {'error': 'CHAR_BAD_JSON'}); return True
-        c = db('ogni_auth'); cur = c.cursor(dictionary=True)
+        c = db('ogni_characters'); cur = c.cursor(dictionary=True)
         cur.execute("SELECT id,name FROM characters WHERE id=%s AND account_id=%s AND deleted_at IS NULL", (cid, acc))
         ch = cur.fetchone(); c.close()
         if not ch: send(Msg.WORLD_READY, {'error': 'CHAR_NOT_OWNED'}); return True
