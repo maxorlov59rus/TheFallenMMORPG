@@ -6,7 +6,7 @@ USE ogni_world;
 
 CREATE TABLE IF NOT EXISTS msg_registry (
   msg_id     SMALLINT UNSIGNED NOT NULL PRIMARY KEY,   -- 0x1001 и т.д.
-  direction  ENUM('C2S','S2C') NOT NULL,
+  direction  ENUM('C2S','S2C','BOTH') NOT NULL,
   msg_name   VARCHAR(48) NOT NULL UNIQUE,
   reliable   TINYINT(1) NOT NULL DEFAULT 1,            -- требует ack/retransmit
   rate_limit_per_sec SMALLINT UNSIGNED NULL,           -- C2S антифлуд (MaxPacketsPerSecond поверх)
@@ -31,7 +31,15 @@ INSERT INTO msg_registry (msg_id, direction, msg_name, reliable, rate_limit_per_
  (0x2031,'S2C','ForgeMenu',       1, NULL, '{"recipes":"arr<u32>"}'),
  (0x2040,'S2C','RepChange',       1, NULL, '{"clan_key":"str32","delta":"i16","new_score":"i16"}'),
  (0x2F00,'S2C','SessionAccept',   1, NULL, '{"session_key":"b64","aoi_seed":"u32"}'),
- (0x2F01,'S2C','ProtocolMismatch',1, NULL, '{"server_ver":"u8","min_build":"str32"}')
+ (0x2F01,'S2C','ProtocolMismatch',1, NULL, '{"server_ver":"u8","min_build":"str32"}'),
+ (0x2F02,'C2S','SessionHello',    1, 1,  '{"jwt":"str512"}'),
+ (0x3001,'C2S','CharListReq',     1, 2,  '{}'),
+ (0x3002,'S2C','CharList',        1, NULL, '{"characters":"arr","templates":"arr","max_chars":"u8"}'),
+ (0x3003,'BOTH','CharTemplates',  1, 2,  '{"templates":"arr_full_schema"}'),
+ (0x3010,'C2S','CharCreate',      1, 1,  '{"template_key":"str32","name":"str24","appearance":"map"}'),
+ (0x3011,'S2C','CharCreateOk',    1, NULL, '{"character_id":"u64","name":"str24","template_key":"str32","error":"CHAR_optional"}'),
+ (0x3012,'C2S','CharEnterWorld',  1, 1,  '{"character_id":"u64"}'),
+ (0x3013,'S2C','WorldReady',      1, NULL, '{"character_id":"u64","zone_key":"str32","pos":"f32x3","hp":"u32","max_hp":"u32","resource_type":"str","stats":"map"}')
 ON DUPLICATE KEY UPDATE schema_json = VALUES(schema_json);
 
 -- Тестовые данные стенда (dev-only; prod чистится install-скриптом)
