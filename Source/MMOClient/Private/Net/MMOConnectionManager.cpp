@@ -2,6 +2,8 @@
 
 #include "Net/MMOConnectionManager.h"
 #include "MMOClient.h"
+#include "Character/MMOCharacterEditorSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "Engine/Engine.h"
 #include "Engine/NetDriver.h"
 #include "Dom/JsonObject.h"
@@ -94,6 +96,18 @@ void UMMOConnectionManager::OnWireAccepted()
 	UE_LOG(LogMMONet, Log, TEXT("[wire] S2C_SessionAccept OK (key %d bytes, aoi_seed %X)"),
 		SessionKey.Num(), AoiSeed);
 	SetState(EMMOConnectionState::ConnectedToWorld);
+
+	// Автоподписка редактора персонажа: GameInstance-подсистема связывается с этим Conn
+	// и сама запрашивает ростер/шаблоны (CHARACTER_FLOW п.1, шаг CharListReq).
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMMOCharacterEditorSubsystem* EditorSub = GI->GetSubsystem<UMMOCharacterEditorSubsystem>())
+		{
+			EditorSub->BindConnection(this);
+			FString Err;
+			EditorSub->RequestRosterAndTemplates(Err);
+		}
+	}
 	// UI-слой (редактор персонажа) получает ростер по запросу RequestCharacterList()
 }
 
