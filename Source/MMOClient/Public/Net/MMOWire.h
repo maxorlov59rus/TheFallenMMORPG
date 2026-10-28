@@ -83,7 +83,8 @@ namespace OgnWire
 }
 
 /** Нативный делегат S2C JSON-кадров персонажной линии (объявлен вне класса — синтаксис UE). */
-DECLARE_DELEGATE_TwoParams(FOnWireJsonNative, uint16 /*EMsgId*/, const FString& /*Json*/);
+namespace MMOWireDelegates { DECLARE_DELEGATE_TwoParams(FOnWireJsonNative, uint16 /*EMsgId*/, const FString& /*Json*/); }
+struct FMMOWireJsonDelegate : public MMOWireDelegates::FOnWireJsonNative {};
 
 /**
  * Тонкий UDP-транспорт handshake'а. Отделён от UNetDriver/Iris:
@@ -105,7 +106,7 @@ public:
 	/** Персонажная линия (редактор): JSON-кадры поверх established handshake-сокета.
 	 *  Ответы приходят через SetJsonHandler (msg_id = CharList/CharTemplates/CharCreateOk/WorldReady). */
 	bool SendJson(OgnWire::EMsgId MsgId, const FString& JsonUtf8, FString& OutError);
-	void SetJsonHandler(FOnWireJsonNative InHandler) { OnWireJsonNative = MoveTemp(InHandler); }
+	void SetJsonHandler(MMOWireDelegates::FOnWireJsonNative InHandler) { OnWireJsonNative = MoveTemp(InHandler); }
 
 	const TArray<uint8>& LastSessionKey() const { return SessionKey; }
 	uint32 LastAoiSeed() const { return AoiSeed; }
@@ -114,7 +115,7 @@ public:
 private:
 	FDelegateHandle ReadHandle;
 	FSocket* Socket = nullptr;
-	FOnWireJsonNative OnWireJsonNative;   // dispatch S2C JSON-кадров персонажной линии
+	MMOWireDelegates::FOnWireJsonNative OnWireJsonNative;   // dispatch S2C JSON-кадров персонажной линии
 	uint32 OutSeq = 1;                    // seq для C2S-кадров после handshake
 	TWeakObjectPtr<UMMOConnectionManager> Owner;
 	uint32 HelloSeq = 1;
