@@ -10,3 +10,7 @@ Makefile
 *.dll
 *.exe
 *.out
+
+# Quixel Bridge / Fab временные экспорты
+Bridge/
+FabDownloads/

@@ -115,7 +115,7 @@ void UMMOCharacterEditorWidget::HandleAnySlotChanged(FString Selection, ESelectI
 	// Перебираем известные слоты и проверяем выбранное значение напрямую.
 	for (const auto& Pair : SlotCombos)
 	{
-		UComboBoxString* Combo = WidgetTree->FindWidget<FName>(*FString::Printf(TEXT("SlotCombo_%s"), *Pair.Key), true);
+		UComboBoxString* Combo = WidgetTree->FindWidget<UComboBoxString>(FName(*FString::Printf(TEXT("SlotCombo_%s"), *Pair.Key)), true);
 		if (Combo && Combo == Pair.Value.Get() && Combo->GetSelectedOption() == Selection)
 		{
 			if (Pair.Key == TEXT("body_preset"))
