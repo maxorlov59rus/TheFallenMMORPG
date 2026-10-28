@@ -67,7 +67,8 @@ void AMMOCharacter::ApplyRaceTint(const FString& RaceKey)
 	UMaterialInterface* BaseMat = UMMOAssetLibrary::ResolveWorldMaterial();
 	if (BaseMat)
 	{
-		UMaterialInstanceDynamic* MID = Body->CreateDynamicMaterialInstance(0, BaseMat);
+		UMaterialInstanceDynamic* MID = nullptr;
+		MID = Body->CreateDynamicMaterialInstance(0, BaseMat);
 		if (MID) MID->SetVectorParameterValue(TEXT("Midtone"), Tint);
 		Body->SetMaterial(0, MID);
 		Legs->SetMaterial(0, MID);
