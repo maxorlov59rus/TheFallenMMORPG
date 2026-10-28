@@ -31,7 +31,7 @@ void UMMOConnectionManager::BeginConnect()
 	if (!WireLink)
 	{
 		WireLink = MakeUnique<FMMOWireLink>(this);
-		WireLink->SetJsonHandler(FMMOWireLink::FOnWireJsonNative::CreateWeakLambda(this,
+		WireLink->SetJsonHandler(FMMOWireJsonDelegate::CreateWeakLambda(this,
 			[this](uint16 MsgId, const FString& JsonUtf8){ DispatchWireJson(MsgId, JsonUtf8); }));
 	}
 
