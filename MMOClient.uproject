@@ -1,8 +1,8 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "6.0",
+	"EngineAssociation": "5.8",
 	"Category": "Games",
-	"Description": "MMORPG game client built on Unreal Engine 6",
+	"Description": "MMORPG game client 'Огни душ Падших Валькирий' — UE 5.8 (dual-rail: 6.0 preview)",
 	"Modules": [
 		{
 			"Name": "MMOClient",
@@ -38,6 +38,21 @@
 		{
 			"Name": "OnlineSubsystemUtils",
 			"Enabled": true
+		},
+		{
+			"Name": "QuixelBridge",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "FabImporter",
+			"Enabled": true,
+			"Optional": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
 		}
 	]
 }
