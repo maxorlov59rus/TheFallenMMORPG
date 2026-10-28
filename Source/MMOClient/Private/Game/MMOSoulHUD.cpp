@@ -29,15 +29,15 @@ void AMMOSoulHUD::DrawHUD()
 	// Чистим stale-записи (AOI вышел из видимости > 5с).
 	for (auto It = Entities.CreateIterator(); It; ++It)
 	{
-		if (Now - It->Value.LastSeen > 5.0) It.RemoveCurrent();
+		if (Now - It->LastSeen > 5.0) It.RemoveCurrent();
 	}
 
 	UFont* UseFont = Font.Get() ? Font.Get() : GEngine->GetSmallFont();
 	int32 Idx = 0;
-	for (const auto& Pair : Entities)
+	for (auto It = Entities.CreateIterator(); It; ++It)
 	{
 		if (Idx >= 10) break; // cap на экранный список (dev-раскладка)
-		const FEntityBar& Bar = Pair.Value;
+		const FEntityBar& Bar = *It;
 		// TODO(AOI): проекция world->screen по актору сущности после подключения
 		// реестра entity-акторов (Docs/PROTOCOL.md MobSnapshot). До этого — стабильная
 		// сетка слева сверху: читаемость боевой информации важнее точности привязки.
