@@ -21,7 +21,7 @@ namespace OgnWire
 		FMemory::Memcpy(&Out.Seq,    Data + 5, 4);
 		Out.Flags   = Data[9];
 		Out.Body.Append(Data + HeaderLen, Len - HeaderLen);
-		return Out.Version == Version;
+		return Out.Version == OgnWire::Version;
 	}
 
 	void MakeSessionHello(const FString& Jwt, uint32 Seq, TArray<uint8>& OutFrame)
